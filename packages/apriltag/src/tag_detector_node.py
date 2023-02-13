@@ -84,7 +84,7 @@ class TagDetectorNode(DTROS):
 
 if __name__ == '__main__':
     # create the node
-    node = TagDetectorNode(node_name='my_camera_node')
+    node = TagDetectorNode(node_name='apriltag_node')
     # keep spinning
     node.run()
     rospy.spin()
