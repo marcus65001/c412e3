@@ -5,6 +5,7 @@ from sensor_msgs.msg import CompressedImage, CameraInfo
 from typing import cast
 import numpy as np
 import cv2
+from turbojpeg import TurboJPEG, TJPF_GRAY
 from cv_bridge import CvBridge
 import yaml
 from rectification import Rectify
@@ -34,6 +35,8 @@ class TagDetectorNode(DTROS):
 
     def read_image(self, msg):
         try:
+            if not self.image:
+                self.log("got first msg")
             img=self._bridge.compressed_imgmsg_to_cv2(msg)
             return img
         except Exception as e:
@@ -45,7 +48,7 @@ class TagDetectorNode(DTROS):
 
     def cb_cam_info(self,msg):
         if not self.cam_info:
-            self.cam_info = msg
+            self.cam_info=msg
             self.log('read camera info')
             self.log(self.cam_info)
 
@@ -74,10 +77,7 @@ class TagDetectorNode(DTROS):
         rate = rospy.Rate(2)
         while not rospy.is_shutdown():
             if self.image is not None:
-                image_msg=CompressedImage()
-                image_msg.header.stamp = rospy.Time.now()
-                image_msg.format = "jpeg"
-                image_msg.data = self.image.tobytes()
+                image_msg = self._bridge.cv2_to_compressed_imgmsg(self.image, dst_format="jpeg")
                 self.pub.publish(image_msg)
                 rate.sleep()
 
