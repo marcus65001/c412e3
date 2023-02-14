@@ -9,6 +9,8 @@ from turbojpeg import TurboJPEG, TJPF_GRAY
 from cv_bridge import CvBridge
 import yaml
 from rectification import Rectify
+from dt_apriltags import Detector
+
 
 class TagDetectorNode(DTROS):
 
@@ -32,30 +34,47 @@ class TagDetectorNode(DTROS):
         self.cam_info = None
         self._bridge = CvBridge()
         self._rect = None
+        self._at_detector = Detector(families='tag36h11',
+                       nthreads=1,
+                       quad_decimate=1.0,
+                       quad_sigma=0.0,
+                       refine_edges=1,
+                       decode_sharpening=0.25,
+                       debug=0)
+        self._at_detector_cam_para=None
 
     def read_image(self, msg):
         try:
-            if not self.image:
-                self.log("got first msg")
             img=self._bridge.compressed_imgmsg_to_cv2(msg)
+            if img and not self.image:
+                self.log("got first msg")
             return img
         except Exception as e:
             self.log(e)
             return []
 
-    def rectify_image(self,img):
-        pass
+    def init_rect(self, cam_inf):
+        self.log("init rectification")
+        self._rect=Rectify(cam_inf)
 
     def cb_cam_info(self,msg):
         if not self.cam_info:
-            self.cam_info=msg
+            self.cam_info = msg
             self.log('read camera info')
             self.log(self.cam_info)
+            # init rectification
+            self.init_rect(self.cam_info)
+            # init tag detector
+            camera_matrix=np.array(self.cam_info["K"]).reshape((3,3))
+            self._at_detector_cam_para=(camera_matrix[0, 0], camera_matrix[1, 1], camera_matrix[0, 2], camera_matrix[1, 2])
+
 
     def cb_img(self, msg):
         if self._bridge and self._rect:
             rec_img=self._rect.rectify(self.read_image(msg))
             self.image=rec_img
+            tags = self._at_detector.detect(self.image, True, self._at_detector_cam_para, ?)
+            print(tags)
 
     def readYamlFile(self,fname):
         """
