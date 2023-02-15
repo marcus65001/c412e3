@@ -57,7 +57,7 @@ class TagDetectorNode(DTROS):
         self.log("init rectification")
         self._rect=Rectify(cam_inf)
 
-    def cb_cam_info(self,msg):
+    def cb_cam_info(self, msg):
         if not self.cam_info:
             self.cam_info = msg
             self.log('read camera info')
@@ -65,7 +65,7 @@ class TagDetectorNode(DTROS):
             # init rectification
             self.init_rect(self.cam_info)
             # init tag detector
-            camera_matrix=np.array(self.cam_info["K"]).reshape((3,3))
+            camera_matrix=np.array(self.cam_info.K).reshape((3,3))
             self._at_detector_cam_para=(camera_matrix[0, 0], camera_matrix[1, 1], camera_matrix[0, 2], camera_matrix[1, 2])
 
 
@@ -73,8 +73,8 @@ class TagDetectorNode(DTROS):
         if self._bridge and self._rect:
             rec_img=self._rect.rectify(self.read_image(msg))
             self.image=rec_img
-            tags = self._at_detector.detect(self.image, True, self._at_detector_cam_para, ?)
-            print(tags)
+            # tags = self._at_detector.detect(self.image, True, self._at_detector_cam_para, 0.065)
+            # print(tags)
 
     def readYamlFile(self,fname):
         """

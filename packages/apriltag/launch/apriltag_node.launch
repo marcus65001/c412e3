@@ -8,8 +8,8 @@
     <group ns="$(arg veh)">
         <node name="$(arg node_name)" pkg="$(arg pkg_name)" type="$(arg node_name).py" output="screen" required="true">
             <param name="veh" value="$(arg veh)" />
-            <remap from="~cam" to="$(arg veh)/camera_node/image/compressed"/>
-            <remap from="~cam_info" to="$(arg veh)/camera_node/camera_info"/>
+            <remap from="~cam" to="/$(arg veh)/camera_node/image/compressed"/>
+            <remap from="~cam_info" to="/$(arg veh)/camera_node/camera_info"/>
         </node>
     </group>
 </launch>
