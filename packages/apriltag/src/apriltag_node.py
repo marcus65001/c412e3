@@ -19,8 +19,8 @@ class TagDetectorNode(DTROS):
         super(TagDetectorNode, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
 
         # subscriber
-        self.sub_comp_img = rospy.Subscriber('~cam', CompressedImage, self.cb_img)
-        self.sub_cam_info = rospy.Subscriber('~cam_info', CameraInfo, self.cb_cam_info)
+        self.sub_comp_img = rospy.Subscriber('~cam', CompressedImage, self.cb_img)  # camera image topic
+        self.sub_cam_info = rospy.Subscriber('~cam_info', CameraInfo, self.cb_cam_info)  # camera info topic
 
         # publisher
         self.pub = rospy.Publisher(
@@ -64,15 +64,18 @@ class TagDetectorNode(DTROS):
             self.log(self.cam_info)
             # init rectification
             self.init_rect(self.cam_info)
-            # init tag detector
+            # init tag detector parameters
             camera_matrix=np.array(self.cam_info.K).reshape((3,3))
             self._at_detector_cam_para=(camera_matrix[0, 0], camera_matrix[1, 1], camera_matrix[0, 2], camera_matrix[1, 2])
 
 
     def cb_img(self, msg):
+        # image callback
         if self._bridge and self._rect:
+            # rectify
             rec_img=self._rect.rectify(self.read_image(msg))
             self.image=rec_img
+            # tag detection, commented out for now
             # tags = self._at_detector.detect(self.image, True, self._at_detector_cam_para, 0.065)
             # print(tags)
 
@@ -96,6 +99,7 @@ class TagDetectorNode(DTROS):
         rate = rospy.Rate(2)
         while not rospy.is_shutdown():
             if self.image is not None:
+                # publish image
                 image_msg = self._bridge.cv2_to_compressed_imgmsg(self.image, dst_format="jpeg")
                 self.pub.publish(image_msg)
                 rate.sleep()
