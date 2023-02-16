@@ -43,19 +43,19 @@ class TagDetectorNode(DTROS):
                        debug=0)
         self._at_detector_cam_para=None
 
+        self.ci_cam_matrix = None
+        self.ci_cam_dist = None
+
     def read_image(self, msg):
         try:
             img=self._bridge.compressed_imgmsg_to_cv2(msg)
-            if img and not self.image:
+            if (img is not None) and (self.image is None):
                 self.log("got first msg")
             return img
         except Exception as e:
             self.log(e)
-            return []
+            return np.array([])
 
-    def init_rect(self, cam_inf):
-        self.log("init rectification")
-        self._rect=Rectify(cam_inf)
 
     def cb_cam_info(self, msg):
         if not self.cam_info:
@@ -63,7 +63,9 @@ class TagDetectorNode(DTROS):
             self.log('read camera info')
             self.log(self.cam_info)
             # init rectification
-            self.init_rect(self.cam_info)
+            self.ci_cam_matrix=np.array(self.cam_info.K).reshape((3,3))
+            self.ci_cam_dist=np.array(self.cam_info.D).reshape((1,5))
+
             # init tag detector parameters
             camera_matrix=np.array(self.cam_info.K).reshape((3,3))
             self._at_detector_cam_para=(camera_matrix[0, 0], camera_matrix[1, 1], camera_matrix[0, 2], camera_matrix[1, 2])
@@ -71,10 +73,19 @@ class TagDetectorNode(DTROS):
 
     def cb_img(self, msg):
         # image callback
-        if self._bridge and self._rect:
+        if self._bridge and (self.ci_cam_matrix is not None):
             # rectify
-            rec_img=self._rect.rectify(self.read_image(msg))
-            self.image=rec_img
+            u_img=self.read_image(msg)
+            # rec_img=self._rect.rectify(u_img)
+            # self.log(u_img)
+            if not u_img.size:
+                return
+            h, w = u_img.shape[:2]
+            newcameramtx, roi = cv2.getOptimalNewCameraMatrix(self.ci_cam_matrix, self.ci_cam_dist, (w, h), 1, (w, h))
+            dst = cv2.undistort(u_img, self.ci_cam_matrix, self.ci_cam_dist, None, newcameramtx)
+            x, y, w, h = roi
+            dst = dst[y:y + h, x:x + w]
+            self.image=dst
             # tag detection, commented out for now
             # tags = self._at_detector.detect(self.image, True, self._at_detector_cam_para, 0.065)
             # print(tags)
