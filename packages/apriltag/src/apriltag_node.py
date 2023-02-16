@@ -8,7 +8,6 @@ import cv2
 from turbojpeg import TurboJPEG, TJPF_GRAY
 from cv_bridge import CvBridge
 import yaml
-from rectification import Rectify
 from dt_apriltags import Detector
 
 
@@ -33,7 +32,6 @@ class TagDetectorNode(DTROS):
         self.image = None
         self.cam_info = None
         self._bridge = CvBridge()
-        self._rect = None
         self._at_detector = Detector(families='tag36h11',
                        nthreads=1,
                        quad_decimate=1.0,
@@ -62,7 +60,7 @@ class TagDetectorNode(DTROS):
             self.cam_info = msg
             self.log('read camera info')
             self.log(self.cam_info)
-            # init rectification
+            # init camera info matrices
             self.ci_cam_matrix=np.array(self.cam_info.K).reshape((3,3))
             self.ci_cam_dist=np.array(self.cam_info.D).reshape((1,5))
 
@@ -76,8 +74,6 @@ class TagDetectorNode(DTROS):
         if self._bridge and (self.ci_cam_matrix is not None):
             # rectify
             u_img=self.read_image(msg)
-            # rec_img=self._rect.rectify(u_img)
-            # self.log(u_img)
             if not u_img.size:
                 return
             h, w = u_img.shape[:2]
@@ -86,25 +82,10 @@ class TagDetectorNode(DTROS):
             x, y, w, h = roi
             dst = dst[y:y + h, x:x + w]
             self.image=dst
+            self.image=cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
             # tag detection, commented out for now
             # tags = self._at_detector.detect(self.image, True, self._at_detector_cam_para, 0.065)
             # print(tags)
-
-    def readYamlFile(self,fname):
-        """
-            Reads the 'fname' yaml file and returns a dictionary with its input.
-            You will find the calibration files you need in:
-            `/data/config/calibrations/`
-        """
-        with open(fname, 'r') as in_file:
-            try:
-                yaml_dict = yaml.load(in_file)
-                return yaml_dict
-            except yaml.YAMLError as exc:
-                self.log("YAML syntax error. File: %s fname. Exc: %s"
-                         %(fname, exc), type='fatal')
-                rospy.signal_shutdown()
-                return
 
     def run(self):
         rate = rospy.Rate(2)
