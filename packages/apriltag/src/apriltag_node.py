@@ -84,8 +84,8 @@ class TagDetectorNode(DTROS):
             self.image=dst
             self.image=cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
             # tag detection, commented out for now
-            # tags = self._at_detector.detect(self.image, True, self._at_detector_cam_para, 0.065)
-            # print(tags)
+            tags = self._at_detector.detect(self.image, True, self._at_detector_cam_para, 0.065)
+            print(tags)
 
     def run(self):
         rate = rospy.Rate(2)
