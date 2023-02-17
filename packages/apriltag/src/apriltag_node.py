@@ -9,6 +9,8 @@ from turbojpeg import TurboJPEG, TJPF_GRAY
 from cv_bridge import CvBridge
 import yaml
 from dt_apriltags import Detector
+from duckietown_msgs.srv import ChangePattern, ChangePatternResponse
+from std_msgs.msg import String
 
 
 class TagDetectorNode(DTROS):
@@ -29,6 +31,13 @@ class TagDetectorNode(DTROS):
             dt_topic_type=TopicType.VISUALIZATION,
             dt_help="The stream of JPEG compressed images from the modified camera feed",
         )
+
+        # services
+        self.srvp_led_emitter = rospy.ServiceProxy(
+            "~set_pattern", ChangePattern
+        )
+
+        # parameters and internal objects
         self.image = None
         self.cam_info = None
         self._bridge = CvBridge()
@@ -43,6 +52,23 @@ class TagDetectorNode(DTROS):
 
         self.ci_cam_matrix = None
         self.ci_cam_dist = None
+
+        # color mappings
+        self.tag_cat_id={
+            "ua":[93,94,200,201],
+            "t":[58,62,133,153],
+            "stop":[162,169],
+            "test":[227]
+        }
+        self.tag_color={
+            None: "white",
+            "ua": "green",
+            "stop": "red",
+            "t": "blue",
+            "test": "cyan"
+        }
+        self.led_color = "white"
+
 
     def read_image(self, msg):
         try:
@@ -76,7 +102,14 @@ class TagDetectorNode(DTROS):
         dst = dst[y:y + h, x:x + w]
         return dst
 
-    def draw_segment(self, image, pt_x, pt_y, color):
+    def tag_id_to_color(self, id):
+        cat=None
+        for k,v in self.tag_cat_id.items():
+            if id in v:
+                cat = k
+        return self.tag_color[cat]
+
+    def draw_segment(self, image, pt_A, pt_B, color):
         defined_colors = {
             'red': ['rgb', [1, 0, 0]],
             'green': ['rgb', [0, 1, 0]],
@@ -87,13 +120,23 @@ class TagDetectorNode(DTROS):
             'white': ['rgb', [1, 1, 1]],
             'black': ['rgb', [0, 0, 0]]}
         _color_type, [r, g, b] = defined_colors[color]
-        cv2.line(image, (pt_x[0], pt_y[0]), (pt_x[1], pt_y[1]), (b * 255, g * 255, r * 255), 5)
+        cv2.line(image, pt_A, pt_B, (b * 255, g * 255, r * 255), 5)
         return image
 
+    def set_led(self, color):
+        if color==self.led_color:
+            return
+        self.log("Change LED: {}".format(color))
+        msg = String()
+        msg.data = color
+        self.srvp_led_emitter(msg)
+
     def tag_detect(self, img):
-        tags = self._at_detector.detect(img, True, self._at_detector_cam_para, 0.065)
-        print(tags)
+        tags = self._at_detector.detect(img, True, self._at_detector_cam_para, 0.091)
+        # print(tags)
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        dist=np.inf
+        rcand=None
         for r in tags:
             (ptA, ptB, ptC, ptD) = r.corners
             ptB = (int(ptB[0]), int(ptB[1]))
@@ -102,14 +145,27 @@ class TagDetectorNode(DTROS):
             ptA = (int(ptA[0]), int(ptA[1]))
 
             # draw the bounding box
-            cv2.line(img, ptA, ptB, (0, 255, 0), 2)
-            cv2.line(img, ptB, ptC, (0, 255, 0), 2)
-            cv2.line(img, ptC, ptD, (0, 255, 0), 2)
-            cv2.line(img, ptD, ptA, (0, 255, 0), 2)
+            # cv2.line(img, ptA, ptB, (0, 255, 0), 2)
+            # cv2.line(img, ptB, ptC, (0, 255, 0), 2)
+            # cv2.line(img, ptC, ptD, (0, 255, 0), 2)
+            # cv2.line(img, ptD, ptA, (0, 255, 0), 2)
+            color=self.tag_id_to_color(r.tag_id)
+            self.draw_segment(img, ptA, ptB, color)
+            self.draw_segment(img, ptB, ptC, color)
+            self.draw_segment(img, ptC, ptD, color)
+            self.draw_segment(img, ptD, ptA, color)
 
             # draw the center
             (cX, cY) = (int(r.center[0]), int(r.center[1]))
             cv2.circle(img, (cX, cY), 5, (0, 0, 255), -1)
+
+            # dist
+            if (tdist:=np.linalg.norm(r.pose_t))<dist:
+                dist=tdist
+                rcand=r
+        print(rcand)
+        # led
+        self.set_led(self.tag_id_to_color(rcand.tag_id) if rcand else "white")
         return img
 
 
