@@ -61,11 +61,11 @@ class TagDetectorNode(DTROS):
             # "other":[227]
         }
         self.tag_color={
-            None: "white",
-            "ua": "green",
-            "stop": "red",
-            "t": "blue",
-            "other": "purple"
+            None: "WHITE",
+            "ua": "GREEN",
+            "stop": "RED",
+            "t": "BLUE",
+            "other": "LIGHT_OFF"
         }
         self.led_color = "white"
 
@@ -111,14 +111,14 @@ class TagDetectorNode(DTROS):
 
     def draw_segment(self, image, pt_A, pt_B, color):
         defined_colors = {
-            'red': ['rgb', [1, 0, 0]],
-            'green': ['rgb', [0, 1, 0]],
-            'blue': ['rgb', [0, 0, 1]],
+            'RED': ['rgb', [1, 0, 0]],
+            'GREEN': ['rgb', [0, 1, 0]],
+            'BLUE': ['rgb', [0, 0, 1]],
             'yellow': ['rgb', [1, 1, 0]],
             'purple': ['rgb', [1, 0, 1]],
             'cyan': ['rgb', [0, 1, 1]],
-            'white': ['rgb', [1, 1, 1]],
-            'black': ['rgb', [0, 0, 0]]}
+            'WHITE': ['rgb', [1, 1, 1]],
+            'LIGHT_OFF': ['rgb', [0, 0, 0]]}
         _color_type, [r, g, b] = defined_colors[color]
         cv2.line(image, pt_A, pt_B, (b * 255, g * 255, r * 255), 5)
         return image
@@ -129,7 +129,12 @@ class TagDetectorNode(DTROS):
         self.log("Change LED: {}".format(color))
         msg = String()
         msg.data = color
-        self.srvp_led_emitter(msg)
+        try:
+            self.srvp_led_emitter(msg)
+            self.led_color=color
+        except Exception as e:
+            self.log("Set LED error: {}".format(e))
+
 
     def tag_detect(self, img):
         tags = self._at_detector.detect(img, True, self._at_detector_cam_para, 0.091)
@@ -165,7 +170,7 @@ class TagDetectorNode(DTROS):
                 rcand=r
         print(rcand)
         # led
-        self.set_led(self.tag_id_to_color(rcand.tag_id) if rcand else "white")
+        self.set_led(self.tag_id_to_color(rcand.tag_id) if rcand else "WHITE")
         return img
 
 
