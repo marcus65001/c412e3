@@ -178,24 +178,23 @@ class TagDetectorNode(DTROS):
         # image callback
         if self._bridge and (self.ci_cam_matrix is not None):
             # rectify
-            u_img=self.read_image(msg)
-            if not u_img.size:
-                return
-            self.image=self.undistort(u_img)
-            # grayscale
-            self.image=cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
-            # tag detection
-            self.image=self.tag_detect(self.image)
-            # publish
-            image_msg = self._bridge.cv2_to_compressed_imgmsg(self.image, dst_format="jpeg")
-            self.pub.publish(image_msg)
+            self.image=self.read_image(msg)
+
 
     def run(self):
         rate = rospy.Rate(2)
         while not rospy.is_shutdown():
             if self.image is not None:
                 # publish image
-                image_msg = self._bridge.cv2_to_compressed_imgmsg(self.image, dst_format="jpeg")
+                if not self.image.size:
+                    return
+                ud_image = self.undistort(self.image)
+                # grayscale
+                g_image = cv2.cvtColor(ud_image, cv2.COLOR_BGR2GRAY)
+                # tag detection
+                td_image = self.tag_detect(g_image)
+                # publish
+                image_msg = self._bridge.cv2_to_compressed_imgmsg(td_image, dst_format="jpeg")
                 self.pub.publish(image_msg)
                 rate.sleep()
 
@@ -204,5 +203,5 @@ if __name__ == '__main__':
     # create the node
     node = TagDetectorNode(node_name='apriltag_node')
     # keep spinning
-    # node.run()
+    node.run()
     rospy.spin()
