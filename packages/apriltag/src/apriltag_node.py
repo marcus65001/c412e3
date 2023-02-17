@@ -58,14 +58,14 @@ class TagDetectorNode(DTROS):
             "ua":[93,94,200,201],
             "t":[58,62,133,153],
             "stop":[162,169],
-            "test":[227]
+            # "other":[227]
         }
         self.tag_color={
             None: "white",
             "ua": "green",
             "stop": "red",
             "t": "blue",
-            "test": "cyan"
+            "other": "purple"
         }
         self.led_color = "white"
 
@@ -107,7 +107,7 @@ class TagDetectorNode(DTROS):
         for k,v in self.tag_cat_id.items():
             if id in v:
                 cat = k
-        return self.tag_color[cat]
+        return self.tag_color[cat] if cat else self.tag_color['other']
 
     def draw_segment(self, image, pt_A, pt_B, color):
         defined_colors = {
@@ -115,7 +115,7 @@ class TagDetectorNode(DTROS):
             'green': ['rgb', [0, 1, 0]],
             'blue': ['rgb', [0, 0, 1]],
             'yellow': ['rgb', [1, 1, 0]],
-            'magenta': ['rgb', [1, 0, 1]],
+            'purple': ['rgb', [1, 0, 1]],
             'cyan': ['rgb', [0, 1, 1]],
             'white': ['rgb', [1, 1, 1]],
             'black': ['rgb', [0, 0, 0]]}
