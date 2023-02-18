@@ -150,10 +150,6 @@ class TagDetectorNode(DTROS):
             ptA = (int(ptA[0]), int(ptA[1]))
 
             # draw the bounding box
-            # cv2.line(img, ptA, ptB, (0, 255, 0), 2)
-            # cv2.line(img, ptB, ptC, (0, 255, 0), 2)
-            # cv2.line(img, ptC, ptD, (0, 255, 0), 2)
-            # cv2.line(img, ptD, ptA, (0, 255, 0), 2)
             color=self.tag_id_to_color(r.tag_id)
             self.draw_segment(img, ptA, ptB, color)
             self.draw_segment(img, ptB, ptC, color)
