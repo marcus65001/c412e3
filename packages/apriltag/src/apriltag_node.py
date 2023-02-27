@@ -2,6 +2,7 @@
 import rospy
 from duckietown.dtros import DTROS, NodeType, TopicType
 from sensor_msgs.msg import CompressedImage, CameraInfo
+from geometry_msgs.msg import Pose, Quaternion, Point
 from typing import cast
 import numpy as np
 import cv2
@@ -11,6 +12,7 @@ import yaml
 from dt_apriltags import Detector
 from duckietown_msgs.srv import ChangePattern, ChangePatternResponse
 from std_msgs.msg import String
+from tf import transformations as tr
 
 
 class TagDetectorNode(DTROS):
@@ -30,6 +32,12 @@ class TagDetectorNode(DTROS):
             queue_size=1,
             dt_topic_type=TopicType.VISUALIZATION,
             dt_help="The stream of JPEG compressed images from the modified camera feed",
+        )
+        self.pub_pose = rospy.Publisher(
+            "~pose",
+            Pose,
+            queue_size=1,
+            dt_topic_type=TopicType.VISUALIZATION,
         )
 
         # services
@@ -68,6 +76,7 @@ class TagDetectorNode(DTROS):
             "other": "LIGHT_OFF"
         }
         self.led_color = "white"
+        self.init_dr=True
 
 
     def read_image(self, msg):
@@ -165,6 +174,21 @@ class TagDetectorNode(DTROS):
                 dist=tdist
                 rcand=r
         print(rcand)
+        # if rcand:
+        #     pnt=Point()
+        #     pnt.x = rcand.pose_t[0]
+        #     pnt.y = rcand.pose_t[1]
+        #     pnt.z = rcand.pose_t[2]
+        #     q = tr.quaternion_from_matrix(rcand.pose_R)
+        #     qm=Quaternion()
+        #     qm.x=q[0]
+        #     qm.y=q[1]
+        #     qm.z=q[2]
+        #     qm.w=q[3]
+        #     pm=Pose()
+        #     pm.position=pnt
+        #     pm.orientation=qm
+        #     self.pub_pose.publish(pm)
         # led
         self.set_led(self.tag_id_to_color(rcand.tag_id) if rcand else "WHITE")
         return img
@@ -177,9 +201,20 @@ class TagDetectorNode(DTROS):
             self.image=self.read_image(msg)
 
 
+    def init_msg(self):
+        if self.pub_pose.get_num_connections()>0:
+            self.init_dr=False
+            self.log("init pos published")
+            q = tr.quaternion_from_euler(0,0,0)
+            pm = Pose(Point(0.32, -0.32, 0), Quaternion(*q))
+            self.pub_pose.publish(pm)
+            return pm
+
     def run(self):
         rate = rospy.Rate(2)
         while not rospy.is_shutdown():
+            if self.init_dr:
+                self.init_msg()
             if self.image is not None:
                 # publish image
                 if not self.image.size:

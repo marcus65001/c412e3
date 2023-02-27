@@ -81,7 +81,7 @@ class DeadReckoningNode(DTROS):
 
         self.sub_encoder_right = message_filters.Subscriber("~right_wheel", WheelEncoderStamped)
 
-        self.sub_at = message_filters.Subscriber("apriltag_node/pose", Pose, self.cb_at_update)
+        self.sub_at = rospy.Subscriber("apriltag_node/pose", Pose, self.cb_at_update)
 
         # Setup the time synchronizer
         self.ts_encoders = message_filters.ApproximateTimeSynchronizer(
@@ -174,13 +174,15 @@ class DeadReckoningNode(DTROS):
         self.encoders_timestamp_last_local = timestamp_now
 
     def cb_at_update(self, msg):
-        pos_v=np.array([msg.position.x,msg.position.y,msg.position.z])
-        ori_v=np.array([msg.orientation.x,msg.orientation.y,msg.orientation.z,msg.orientation.w])
-        if (pos_v.all() and ori_v.all()):
-            self.x = pos_v[0]
-            self.y = pos_v[1]
-            self.z = pos_v[2]
-            # self.q
+        if (msg is not None):
+            self.x = msg.position.x
+            self.y = msg.position.y
+            self.z = msg.position.z
+            self.q[0]=msg.orientation.x
+            self.q[1]=msg.orientation.y
+            self.q[2]=msg.orientation.z
+            self.q[3]=msg.orientation.w
+            self.log("tag update {}".format(msg))
 
 
     def cb_timer(self, _):
