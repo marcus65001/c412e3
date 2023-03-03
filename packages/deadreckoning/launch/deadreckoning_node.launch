@@ -13,15 +13,16 @@
             <rosparam command="load"
                 file="$(find deadreckoning)/config/$(arg node_name)/$(arg param_file_name).yaml"/>
         </node>
-        <node pkg="tf2_ros" type="static_transform_publisher" name="at_200_static_pub" args="0.175 0.065 0.075 2.35619 0 0 world at_200_static" />
-        <node pkg="tf2_ros" type="static_transform_publisher" name="at_201_static_pub" args="1.645 0.065 0.075 3.92699 0 0 world at_201_static" />
-        <node pkg="tf2_ros" type="static_transform_publisher" name="at_58_static_pub" args="0.57 1.215 0.075 0 0 0 world at_58_static" />
-        <node pkg="tf2_ros" type="static_transform_publisher" name="at_162_static_pub" args="1.25 1.215 0.075 -1.5708 0 0 world at_162_static" />
-        <node pkg="tf2_ros" type="static_transform_publisher" name="at_153_static_pub" args="1.745 1.215 0.075 0 0 0 world at_153_static" />
-        <node pkg="tf2_ros" type="static_transform_publisher" name="at_62_static_pub" args="0.075 1.845 0.075 3.14159 0 0 world at_62_static" />
-        <node pkg="tf2_ros" type="static_transform_publisher" name="at_169_static_pub" args="0.57 1.845 0.075 1.5708 0 0 world at_169_static" />
-        <node pkg="tf2_ros" type="static_transform_publisher" name="at_133_static_pub" args="1.25 1.845 0.075 3.14159 0 0 world at_133_static" />
-        <node pkg="tf2_ros" type="static_transform_publisher" name="at_94_static_pub" args="0.175 2.995 0.075 0.785398 0 0 world at_94_static" />
-        <node pkg="tf2_ros" type="static_transform_publisher" name="at_93_static_pub" args="1.645 2.995 0.075 -0.785398 0 0 world at_93_static" />
+        <node pkg="tf2_ros" type="static_transform_publisher" name="at_200_static_pub" args="0.175 0.065 0.075 2.35619 0 -1.5708 world at_200_static" />
+        <node pkg="tf2_ros" type="static_transform_publisher" name="at_201_static_pub" args="1.645 0.065 0.075 3.92699 0 -1.5708 world at_201_static" />
+        <node pkg="tf2_ros" type="static_transform_publisher" name="at_58_static_pub" args="0.57 1.215 0.075 0 0 -1.5708 world at_58_static" />
+        <node pkg="tf2_ros" type="static_transform_publisher" name="at_162_static_pub" args="1.25 1.215 0.075 -1.5708 0 -1.5708 world at_162_static" />
+        <node pkg="tf2_ros" type="static_transform_publisher" name="at_153_static_pub" args="1.745 1.215 0.075 0 0 -1.5708 world at_153_static" />
+        <node pkg="tf2_ros" type="static_transform_publisher" name="at_62_static_pub" args="0.075 1.845 0.075 3.14159 0 -1.5708 world at_62_static" />
+        <node pkg="tf2_ros" type="static_transform_publisher" name="at_169_static_pub" args="0.57 1.845 0.075 1.5708 0 -1.5708 world at_169_static" />
+        <node pkg="tf2_ros" type="static_transform_publisher" name="at_133_static_pub" args="1.25 1.845 0.075 3.14159 0 -1.5708 world at_133_static" />
+        <node pkg="tf2_ros" type="static_transform_publisher" name="at_94_static_pub" args="0.175 2.995 0.075 0.785398 0 -1.5708 world at_94_static" />
+        <node pkg="tf2_ros" type="static_transform_publisher" name="at_93_static_pub" args="1.645 2.995 0.075 -0.785398 0 -1.5708 world at_93_static" />
+        <node pkg="tf2_ros" type="static_transform_publisher" name="attach_urdf_static_pub" args="0 0 0 0 0 0 $(arg veh)/odom $(arg veh)/footprint" />
     </group>
 </launch>

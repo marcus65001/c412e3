@@ -2,7 +2,7 @@
 import rospy
 from duckietown.dtros import DTROS, NodeType, TopicType
 from sensor_msgs.msg import CompressedImage, CameraInfo
-from geometry_msgs.msg import Pose, Quaternion, Point
+from geometry_msgs.msg import Pose, Quaternion, Point, TransformStamped, Transform, Vector3
 from typing import cast
 import numpy as np
 import cv2
@@ -13,6 +13,7 @@ from dt_apriltags import Detector
 from duckietown_msgs.srv import ChangePattern, ChangePatternResponse
 from std_msgs.msg import String
 from tf import transformations as tr
+from tf2_ros import TransformBroadcaster
 
 
 class TagDetectorNode(DTROS):
@@ -20,6 +21,8 @@ class TagDetectorNode(DTROS):
     def __init__(self, node_name):
         # initialize the DTROS parent class
         super(TagDetectorNode, self).__init__(node_name=node_name, node_type=NodeType.GENERIC)
+
+        self.veh = rospy.get_param("~veh")
 
         # subscriber
         self.sub_comp_img = rospy.Subscriber('~cam', CompressedImage, self.cb_img)  # camera image topic
@@ -77,6 +80,9 @@ class TagDetectorNode(DTROS):
         }
         self.led_color = "white"
         self.init_dr=True
+
+        # tranform
+        self._tf_broadcaster = TransformBroadcaster()
 
 
     def read_image(self, msg):
@@ -174,21 +180,25 @@ class TagDetectorNode(DTROS):
                 dist=tdist
                 rcand=r
         print(rcand)
-        # if rcand:
-        #     pnt=Point()
-        #     pnt.x = rcand.pose_t[0]
-        #     pnt.y = rcand.pose_t[1]
-        #     pnt.z = rcand.pose_t[2]
-        #     q = tr.quaternion_from_matrix(rcand.pose_R)
-        #     qm=Quaternion()
-        #     qm.x=q[0]
-        #     qm.y=q[1]
-        #     qm.z=q[2]
-        #     qm.w=q[3]
-        #     pm=Pose()
-        #     pm.position=pnt
-        #     pm.orientation=qm
-        #     self.pub_pose.publish(pm)
+        if rcand:
+            t=np.zeros((4,4))
+            t[:3,:3]=np.array(rcand.pose_R)
+            t[3,3]=1.
+            rot=tr.euler_from_matrix(t)
+            # 1roll->pitch, 2pitch->yaw, 3yaw->roll
+            # rotq = Quaternion(*tr.quaternion_from_euler(rot[2]-1.5708, -rot[0], -1.5708-rot[1]))
+            rotq = Quaternion(*tr.quaternion_from_euler(*rot))
+            tmsg=TransformStamped(
+                    child_frame_id="{}/at_det".format(self.veh),
+                    transform=Transform(
+                        translation=Vector3(*rcand.pose_t), rotation=rotq
+                    ),
+                )
+            tmsg.header.stamp=rospy.Time.now()
+            tmsg.header.frame_id="{}/camera_optical_frame".format(self.veh)
+            self._tf_broadcaster.sendTransform(
+                tmsg
+            )
         # led
         self.set_led(self.tag_id_to_color(rcand.tag_id) if rcand else "WHITE")
         return img
@@ -205,8 +215,8 @@ class TagDetectorNode(DTROS):
         if self.pub_pose.get_num_connections()>0:
             self.init_dr=False
             self.log("init pos published")
-            q = tr.quaternion_from_euler(0,0,0)
-            pm = Pose(Point(0.32, -0.32, 0), Quaternion(*q))
+            q = tr.quaternion_from_euler(0,0,1.5708)
+            pm = Pose(Point(0.32, 0.32, 0), Quaternion(*q))
             self.pub_pose.publish(pm)
             return pm
 

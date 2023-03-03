@@ -178,10 +178,8 @@ class DeadReckoningNode(DTROS):
             self.x = msg.position.x
             self.y = msg.position.y
             self.z = msg.position.z
-            self.q[0]=msg.orientation.x
-            self.q[1]=msg.orientation.y
-            self.q[2]=msg.orientation.z
-            self.q[3]=msg.orientation.w
+            et=tr.euler_from_quaternion([msg.orientation.x,msg.orientation.y,msg.orientation.z,msg.orientation.w])
+            self.yaw=et[2]
             self.log("tag update {}".format(msg))
 
 
@@ -225,7 +223,7 @@ class DeadReckoningNode(DTROS):
                 header=odom.header,
                 child_frame_id=self.target_frame,
                 transform=Transform(
-                    translation=Vector3(-self.y, self.x, self.z), rotation=Quaternion(*self.q)
+                    translation=Vector3(self.x, self.y, self.z), rotation=Quaternion(*self.q)
                 ),
             )
         )
