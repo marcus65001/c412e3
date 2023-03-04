@@ -2,7 +2,7 @@
 import rospy
 from duckietown.dtros import DTROS, NodeType, TopicType
 from sensor_msgs.msg import CompressedImage, CameraInfo
-from geometry_msgs.msg import Pose, Quaternion, Point, TransformStamped, Transform, Vector3
+from geometry_msgs.msg import Pose, Quaternion, Point, TransformStamped, Transform, Vector3, PoseStamped
 from typing import cast
 import numpy as np
 import cv2
@@ -13,7 +13,7 @@ from dt_apriltags import Detector
 from duckietown_msgs.srv import ChangePattern, ChangePatternResponse
 from std_msgs.msg import String
 from tf import transformations as tr
-from tf2_ros import TransformBroadcaster
+from tf2_ros import TransformBroadcaster, Buffer, TransformListener
 
 
 class TagDetectorNode(DTROS):
@@ -71,6 +71,7 @@ class TagDetectorNode(DTROS):
             "stop":[162,169],
             # "other":[227]
         }
+        self.tag_all_id=np.concatenate([self.tag_cat_id[i] for i in self.tag_cat_id])
         self.tag_color={
             None: "WHITE",
             "ua": "GREEN",
@@ -83,6 +84,8 @@ class TagDetectorNode(DTROS):
 
         # tranform
         self._tf_broadcaster = TransformBroadcaster()
+        self._tf_buffer = Buffer(rospy.Duration(100.0))  # tf buffer length
+        self._tf_listener = TransformListener(self._tf_buffer)
 
 
     def read_image(self, msg):
@@ -199,6 +202,32 @@ class TagDetectorNode(DTROS):
             self._tf_broadcaster.sendTransform(
                 tmsg
             )
+            if rcand.tag_id in self.tag_all_id:
+                try:
+                    t_at_base=self._tf_buffer.lookup_transform("{}/at_det".format(self.veh),
+                                                               "{}/footprint".format(self.veh)
+                                                               ,rospy.Time(0))
+                    t_at_base.child_frame_id="{}/v_pred".format(self.veh)
+                    t_at_base.header.frame_id="at_{}_static".format(rcand.tag_id)
+                    self.log("t_at_base: {}".format(t_at_base))
+                    self._tf_broadcaster.sendTransform(
+                        t_at_base
+                    )
+
+                    # project
+                    t_base_w = self._tf_buffer.lookup_transform(
+                                                                       "world",
+                        "{}/v_pred".format(self.veh),
+                                                                       rospy.Time(0))
+
+                    pose_new=Pose(Point(t_base_w.transform.translation.x,
+                                        t_base_w.transform.translation.y,
+                                        t_base_w.transform.translation.z),
+                                  t_base_w.transform.rotation)
+                    self.pub_pose.publish(pose_new)
+                except Exception as e:
+                    self.log(e)
+
         # led
         self.set_led(self.tag_id_to_color(rcand.tag_id) if rcand else "WHITE")
         return img
