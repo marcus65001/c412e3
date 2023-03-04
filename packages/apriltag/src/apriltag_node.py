@@ -82,7 +82,7 @@ class TagDetectorNode(DTROS):
         self.led_color = "white"
         self.init_dr=True
         self.tag_det=None
-        self.tag_det_dist=1.7
+        self.tag_det_dist=1.4
 
         # tranform
         self._tf_broadcaster = TransformBroadcaster()
@@ -157,7 +157,7 @@ class TagDetectorNode(DTROS):
 
 
     def tag_detect(self, img):
-        tags = self._at_detector.detect(img, True, self._at_detector_cam_para, 0.091)
+        tags = self._at_detector.detect(img, True, self._at_detector_cam_para, 0.051)
         # print(tags)
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         dist=np.inf
@@ -266,7 +266,7 @@ class TagDetectorNode(DTROS):
         while not rospy.is_shutdown():
             if self.init_dr:
                 self.init_msg()
-                timer_tag_pose=rospy.Timer(rospy.Duration(0.4),self.cb_tag_pose_update)
+                timer_tag_pose=rospy.Timer(rospy.Duration(0.3),self.cb_tag_pose_update)
             if self.image is not None:
                 # publish image
                 if not self.image.size:
