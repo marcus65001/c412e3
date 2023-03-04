@@ -1,0 +1,15 @@
+<launch>
+    <arg name="veh" doc="Name of vehicle. ex: megaman"/>
+    <arg name="pkg_name" value="lane_following"/>
+    <arg name="node_name" default="lane_following_node"/>
+    <arg name="param_file_name" default="default" doc="Specify a param file. ex: experiment_1."/>
+
+
+    <group ns="$(arg veh)">
+        <node name="$(arg node_name)" pkg="$(arg pkg_name)" type="$(arg node_name).py" output="screen" required="true">
+            <param name="veh" value="$(arg veh)" />
+            <remap from="~cam" to="/$(arg veh)/camera_node/image/compressed"/>
+            <remap from="~wheel_control" to="/$(arg veh)/car_cmd_switch_node/cmd"/>
+        </node>
+    </group>
+</launch>

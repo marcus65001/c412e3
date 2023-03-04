@@ -13,10 +13,10 @@ dt-launchfile-init
 # NOTE: Use `dt-exec COMMAND` to run the main process (blocking process)
 
 # launching app
-dt-exec roslaunch led_emitter led_emitter_node.launch veh:=csc22909
+dt-exec roslaunch led_emitter led_emitter_node.launch veh:=csc22912
 dt-exec roslaunch duckietown_demos deadreckoning.launch
-dt-exec roslaunch apriltag apriltag_node.launch veh:=csc22909
-
+dt-exec roslaunch apriltag apriltag_node.launch veh:=csc22912
+dt-exec roslaunch lane_following lane_following_node.launch veh:=csc22912
 # ----------------------------------------------------------------------------
 # YOUR CODE ABOVE THIS LINE
 
