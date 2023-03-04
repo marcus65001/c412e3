@@ -82,6 +82,7 @@ class TagDetectorNode(DTROS):
         self.led_color = "white"
         self.init_dr=True
         self.tag_det=None
+        self.tag_det_dist=1.7
 
         # tranform
         self._tf_broadcaster = TransformBroadcaster()
@@ -194,6 +195,9 @@ class TagDetectorNode(DTROS):
 
     def cb_tag_pose_update(self, timer):
         if self.tag_det is None:
+            return
+        if (dist:=np.linalg.norm(self.tag_det.pose_t))>self.tag_det_dist:
+            self.log("tag {} too far ({}), ignored".format(self.tag_det.tag_id,dist))
             return
         rcand = self.tag_det
         self.tag_det=None
