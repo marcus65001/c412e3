@@ -81,6 +81,7 @@ class TagDetectorNode(DTROS):
         }
         self.led_color = "white"
         self.init_dr=True
+        self.tag_det=None
 
         # tranform
         self._tf_broadcaster = TransformBroadcaster()
@@ -184,54 +185,61 @@ class TagDetectorNode(DTROS):
                 rcand=r
         print(rcand)
         if rcand:
-            t=np.zeros((4,4))
-            t[:3,:3]=np.array(rcand.pose_R)
-            t[3,3]=1.
-            rot=tr.euler_from_matrix(t)
-            # 1roll->pitch, 2pitch->yaw, 3yaw->roll
-            # rotq = Quaternion(*tr.quaternion_from_euler(rot[2]-1.5708, -rot[0], -1.5708-rot[1]))
-            rotq = Quaternion(*tr.quaternion_from_euler(*rot))
-            tmsg=TransformStamped(
-                    child_frame_id="{}/at_det".format(self.veh),
-                    transform=Transform(
-                        translation=Vector3(*rcand.pose_t), rotation=rotq
-                    ),
-                )
-            tmsg.header.stamp=rospy.Time.now()
-            tmsg.header.frame_id="{}/camera_optical_frame".format(self.veh)
-            self._tf_broadcaster.sendTransform(
-                tmsg
-            )
-            if rcand.tag_id in self.tag_all_id:
-                try:
-                    t_at_base=self._tf_buffer.lookup_transform("{}/at_det".format(self.veh),
-                                                               "{}/footprint".format(self.veh)
-                                                               ,rospy.Time(0))
-                    t_at_base.child_frame_id="{}/v_pred".format(self.veh)
-                    t_at_base.header.frame_id="at_{}_static".format(rcand.tag_id)
-                    self.log("t_at_base: {}".format(t_at_base))
-                    self._tf_broadcaster.sendTransform(
-                        t_at_base
-                    )
-
-                    # project
-                    t_base_w = self._tf_buffer.lookup_transform(
-                                                                       "world",
-                        "{}/v_pred".format(self.veh),
-                                                                       rospy.Time(0))
-
-                    pose_new=Pose(Point(t_base_w.transform.translation.x,
-                                        t_base_w.transform.translation.y,
-                                        t_base_w.transform.translation.z),
-                                  t_base_w.transform.rotation)
-                    self.pub_pose.publish(pose_new)
-                except Exception as e:
-                    self.log(e)
+            self.tag_det=rcand
 
         # led
         self.set_led(self.tag_id_to_color(rcand.tag_id) if rcand else "WHITE")
         return img
 
+
+    def cb_tag_pose_update(self, timer):
+        if self.tag_det is None:
+            return
+        rcand = self.tag_det
+        self.tag_det=None
+        t = np.zeros((4, 4))
+        t[:3, :3] = np.array(rcand.pose_R)
+        t[3, 3] = 1.
+        rot = tr.euler_from_matrix(t)
+        # 1roll->pitch, 2pitch->yaw, 3yaw->roll
+        # rotq = Quaternion(*tr.quaternion_from_euler(rot[2]-1.5708, -rot[0], -1.5708-rot[1]))
+        rotq = Quaternion(*tr.quaternion_from_euler(*rot))
+        tmsg = TransformStamped(
+            child_frame_id="{}/at_det".format(self.veh),
+            transform=Transform(
+                translation=Vector3(*rcand.pose_t), rotation=rotq
+            ),
+        )
+        tmsg.header.stamp = rospy.Time.now()
+        tmsg.header.frame_id = "{}/camera_optical_frame".format(self.veh)
+        self._tf_broadcaster.sendTransform(
+            tmsg
+        )
+        if rcand.tag_id in self.tag_all_id:
+            try:
+                t_at_base = self._tf_buffer.lookup_transform("{}/at_det".format(self.veh),
+                                                             "{}/footprint".format(self.veh)
+                                                             , rospy.Time(0))
+                t_at_base.child_frame_id = "{}/v_pred".format(self.veh)
+                t_at_base.header.frame_id = "at_{}_static".format(rcand.tag_id)
+                self.log("t_at_base: {}".format(t_at_base))
+                self._tf_broadcaster.sendTransform(
+                    t_at_base
+                )
+
+                # project
+                t_base_w = self._tf_buffer.lookup_transform(
+                    "world",
+                    "{}/v_pred".format(self.veh),
+                    rospy.Time(0))
+
+                pose_new = Pose(Point(t_base_w.transform.translation.x,
+                                      t_base_w.transform.translation.y,
+                                      0),
+                                t_base_w.transform.rotation)
+                self.pub_pose.publish(pose_new)
+            except Exception as e:
+                self.log(e)
 
     def cb_img(self, msg):
         # image callback
@@ -254,6 +262,7 @@ class TagDetectorNode(DTROS):
         while not rospy.is_shutdown():
             if self.init_dr:
                 self.init_msg()
+                timer_tag_pose=rospy.Timer(rospy.Duration(0.4),self.cb_tag_pose_update)
             if self.image is not None:
                 # publish image
                 if not self.image.size:
