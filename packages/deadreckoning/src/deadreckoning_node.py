@@ -4,6 +4,7 @@ import time
 import math
 import rospy
 import message_filters
+import numpy as np
 
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Quaternion, Twist, Pose, Point, Vector3, TransformStamped, Transform
@@ -79,6 +80,8 @@ class DeadReckoningNode(DTROS):
         self.sub_encoder_left = message_filters.Subscriber("~left_wheel", WheelEncoderStamped)
 
         self.sub_encoder_right = message_filters.Subscriber("~right_wheel", WheelEncoderStamped)
+
+        self.sub_at = rospy.Subscriber("apriltag_node/pose", Pose, self.cb_at_update)
 
         # Setup the time synchronizer
         self.ts_encoders = message_filters.ApproximateTimeSynchronizer(
@@ -169,6 +172,16 @@ class DeadReckoningNode(DTROS):
         self.right_encoder_last = right_encoder
         self.encoders_timestamp_last = timestamp
         self.encoders_timestamp_last_local = timestamp_now
+
+    def cb_at_update(self, msg):
+        if (msg is not None):
+            self.x = msg.position.x
+            self.y = msg.position.y
+            self.z = msg.position.z
+            et=tr.euler_from_quaternion([msg.orientation.x,msg.orientation.y,msg.orientation.z,msg.orientation.w])
+            self.yaw=et[2]
+            self.log("tag update {}".format(msg))
+
 
     def cb_timer(self, _):
         need_print = time.time() - self._print_time > self._print_every_sec
